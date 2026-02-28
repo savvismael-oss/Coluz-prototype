@@ -1,87 +1,11 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Coluz V2 | Pro</title>
-    <script src="/socket.io/socket.io.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=gg+sans:wght@400;500;700&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg-dark: #313338; --bg-sidebar: #2B2D31; --bg-channels: #1E1F22;
-            --text-main: #DBDEE1; --text-muted: #949BA4; --discord-blue: #5865F2;
-            --owner-gold: #FFD700; --danger: #F23F42;
-        }
-        body, html { margin: 0; padding: 0; height: 100%; font-family: 'gg sans', sans-serif; background: var(--bg-dark); color: var(--text-main); overflow: hidden; }
-        
-        /* Estructura */
-        .app-container { display: flex; height: 100vh; }
-        .guilds { width: 72px; background: var(--bg-channels); display: flex; flex-direction: column; align-items: center; padding: 12px 0; gap: 8px; }
-        .sidebar { width: 240px; background: var(--bg-sidebar); display: flex; flex-direction: column; }
-        .chat-area { flex: 1; display: flex; flex-direction: column; background: var(--bg-dark); }
+const socket = io();
+    let currentUser = JSON.parse(localStorage.getItem('coluz_user')) || {};
 
-        /* Login */
-        #login-screen { position: fixed; inset: 0; background: #1E1F22; z-index: 1000; display: flex; align-items: center; justify-content: center; }
-        .login-box { background: #313338; padding: 40px; border-radius: 8px; width: 412px; box-shadow: 0 8px 16px rgba(0,0,0,0.5); }
-        .login-box input { width: 100%; padding: 12px; margin: 8px 0; background: #1E1F22; border: 1px solid #232428; color: white; border-radius: 4px; box-sizing: border-box; }
-        .login-box button { width: 100%; padding: 12px; background: var(--discord-blue); color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-
-        /* Mensajes */
-        #messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
-        .message { display: flex; gap: 16px; position: relative; group; }
-        .message:hover { background: rgba(0,0,0,0.05); }
-        .avatar { width: 40px; height: 40px; background: var(--discord-blue); border-radius: 50%; }
-        .user-name { font-weight: 600; color: white; margin-right: 8px; }
-        .timestamp { font-size: 0.75rem; color: var(--text-muted); }
-        .delete-btn { display: none; color: var(--danger); cursor: pointer; font-size: 0.8rem; margin-left: 10px; }
-        .message:hover .delete-btn { display: inline; }
-
-        /* Input */
-        .input-box { padding: 0 16px 24px; }
-        .input-wrapper { background: #383A40; border-radius: 8px; padding: 12px 16px; }
-        #msg-input { background: transparent; border: none; color: white; width: 100%; outline: none; font-size: 1rem; }
-
-        .owner-tag { background: var(--owner-gold); color: black; font-size: 0.65rem; padding: 2px 4px; border-radius: 4px; font-weight: 800; vertical-align: middle; }
-    </style>
-</head>
-<body>
-
-<div id="login-screen">
-    <div class="login-box">
-        <h2 style="text-align: center;">¡Hola de nuevo!</h2>
-        <p style="text-align: center; color: var(--text-muted);">Estamos muy emocionados de volverte a ver.</p>
-        <input type="text" id="username" placeholder="NOMBRE DE USUARIO">
-        <input type="text" id="usertag" placeholder="USERTAG (ej: @galacto)">
-        <input type="email" id="usergmail" placeholder="GMAIL">
-        <button onclick="login()">Continuar</button>
-    </div>
-</div>
-
-<div class="app-container">
-    <div class="guilds"><div style="width: 48px; height: 48px; background: var(--discord-blue); border-radius: 16px; display: flex; align-items: center; justify-content: center; font-weight: bold;">C</div></div>
-    <div class="sidebar">
-        <div style="height: 48px; padding: 0 16px; display: flex; align-items: center; font-weight: bold; border-bottom: 1px solid rgba(0,0,0,0.2);">COLUZ SERVER</div>
-        <div style="padding: 20px 8px;">
-            <div style="color: white; padding: 8px; background: #3F4147; border-radius: 4px;"># global-board</div>
-            <div style="color: var(--text-muted); padding: 8px;"># anuncios</div>
-        </div>
-    </div>
-    <div class="chat-area">
-        <div style="height: 48px; padding: 0 16px; display: flex; align-items: center; box-shadow: 0 1px 2px rgba(0,0,0,0.2); font-weight: bold;"># global-board</div>
-        <div id="messages"></div>
-        <div class="input-box">
-            <div class="input-wrapper">
-                <input type="text" id="msg-input" placeholder="Enviar mensaje a #global-board">
-            </div>
-        </div>
-    </div>
-</div>
-
-<div onclick="unlockOwner()" style="position:fixed; top:0; right:0; width:20px; height:20px; z-index:9999;"></div>
-
-<script>
-    const socket = io();
-    let currentUser = {};
+    // Si ya tiene sesión guardada, saltamos el login
+    if(currentUser.gmail) {
+        document.getElementById('login-screen').style.display = 'none';
+        updateSidebarProfile();
+    }
 
     function login() {
         const u = document.getElementById('username').value;
@@ -89,70 +13,53 @@
         const g = document.getElementById('usergmail').value;
         if(!u || !t || !g) return alert("Rellena todo, cabrón.");
         
-        currentUser = { name: u, tag: t, gmail: g, role: 'USER' };
+        currentUser = { name: u, tag: t, gmail: g, role: 'USER', desc: "Chateando en Coluz", pfp: "" };
+        localStorage.setItem('coluz_user', JSON.stringify(currentUser));
         
-        // Recuperar si ya era OWNER localmente
-        if(localStorage.getItem('coluz_role') === 'OWNER') currentUser.role = 'OWNER';
-
         document.getElementById('login-screen').style.display = 'none';
+        updateSidebarProfile();
     }
 
-    function unlockOwner() {
-        if(prompt("Clave Maestra:") === 'Chasm') {
-            currentUser.role = 'OWNER';
-            localStorage.setItem('coluz_role', 'OWNER');
-            alert("Rango OWNER Activo, Jefe.");
+    // ACTUALIZAR PERFIL EN LA BARRA LATERAL
+    function updateSidebarProfile() {
+        document.getElementById('p-name').innerText = currentUser.name;
+        document.getElementById('p-desc').innerText = currentUser.desc;
+        if(currentUser.pfp) {
+            document.getElementById('p-avatar').innerHTML = `<img src="${currentUser.pfp}" style="width:100%; height:100%; border-radius:50%;">`;
         }
     }
 
-    document.getElementById('msg-input').addEventListener('keypress', (e) => {
-        if(e.key === 'Enter' && e.target.value.trim()) {
-            socket.emit('chat message', {
-                ...currentUser,
-                text: e.target.value,
-                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            });
-            e.target.value = '';
+    // ABRIR EDICIÓN DE PERFIL (Al tocar tu perfil)
+    function openEditProfile() {
+        const newName = prompt("Nuevo Nickname:", currentUser.name);
+        const newDesc = prompt("Nueva Descripción:", currentUser.desc);
+        const newPfp = prompt("Pega el link de tu imagen (URL):", currentUser.pfp);
+        
+        if(newName) currentUser.name = newName;
+        if(newDesc) currentUser.desc = newDesc;
+        if(newPfp) currentUser.pfp = newPfp;
+        
+        localStorage.setItem('coluz_user', JSON.stringify(currentUser));
+        updateSidebarProfile();
+        alert("Perfil actualizado, galactomany.");
+    }
+
+    // SISTEMA DE AMIGOS (Básico por ahora)
+    function addFriend() {
+        const tag = prompt("Introduce el @UserTag de tu amigo:");
+        if(tag) {
+            const list = document.getElementById('friends-list');
+            const div = document.createElement('div');
+            div.className = 'channel-item';
+            div.innerHTML = `👤 ${tag}`;
+            div.onclick = () => alert("Abriendo chat privado con " + tag);
+            list.appendChild(div);
+            alert("Solicitud enviada a " + tag);
         }
-    });
-
-    socket.on('load messages', (history) => {
-        document.getElementById('messages').innerHTML = '';
-        history.forEach(addMessage);
-    });
-
-    socket.on('chat message', addMessage);
-
-    function addMessage(msg) {
-        const div = document.createElement('div');
-        div.className = 'message';
-        div.id = `msg-${msg.id}`;
-        div.innerHTML = `
-            <div class="avatar"></div>
-            <div class="content">
-                <div class="msg-info">
-                    <span class="user-name">${msg.name}</span>
-                    ${msg.role === 'OWNER' ? '<span class="owner-tag">OWNER</span>' : ''}
-                    <span class="timestamp">Hoy a las ${msg.time}</span>
-                    ${(msg.gmail === currentUser.gmail || currentUser.role === 'OWNER') ? `<span class="delete-btn" onclick="deleteMsg(${msg.id})">Eliminar</span>` : ''}
-                </div>
-                <div class="text-content">${msg.text}</div>
-            </div>
-        `;
-        const container = document.getElementById('messages');
-        container.appendChild(div);
-        container.scrollTop = container.scrollHeight;
     }
 
-    function deleteMsg(id) {
-        socket.emit('delete message', { id: id });
-    }
-
-    socket.on('message deleted', (id) => {
-        const el = document.getElementById(`msg-${id}`);
-        if(el) el.remove();
-    });
-
+    // --- EL RESTO DEL CÓDIGO DE MENSAJES SE QUEDA IGUAL ---
 </script>
 </body>
 </html>
+
