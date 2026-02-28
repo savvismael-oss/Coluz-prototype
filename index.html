@@ -3,161 +3,156 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Coluz</title>
+    <title>Coluz V2 | Pro</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=gg+sans:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        :root { --bg: #36393f; --side: #2f3136; --dark: #202225; --text: #dcddde; --accent: #5865f2; --owner: #ffaa00; }
-        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
-        
-        /* EL SECRETO: Esquina superior derecha, invisible pero clickeable */
-        #secret-trigger { 
-            position: fixed; 
-            top: 0; 
-            right: 0; 
-            width: 60px; 
-            height: 60px; 
-            z-index: 9999; 
-            cursor: default; 
+        :root {
+            --bg-dark: #313338; --bg-sidebar: #2B2D31; --bg-channels: #1E1F22;
+            --text-main: #DBDEE1; --text-muted: #949BA4; --discord-blue: #5865F2;
+            --owner-gold: #FFD700; --danger: #F23F42;
         }
-
-        /* Sidebar */
-        #sidebar { width: 260px; background: var(--side); padding: 20px; display: flex; flex-direction: column; border-right: 1px solid #222; }
-        .profile-card { background: var(--dark); padding: 15px; border-radius: 12px; text-align: center; border: 1px solid #444; }
-        .avatar { width: 60px; height: 60px; border-radius: 50%; background: var(--accent); margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; border: 2px solid #fff; overflow: hidden; }
-        .avatar img { width: 100%; height: 100%; object-fit: cover; }
+        body, html { margin: 0; padding: 0; height: 100%; font-family: 'gg sans', sans-serif; background: var(--bg-dark); color: var(--text-main); overflow: hidden; }
         
-        /* Chat */
-        #main { flex: 1; display: flex; flex-direction: column; }
-        #messages { flex: 1; overflow-y: auto; padding: 20px; list-style: none; margin: 0; }
-        .m { margin-bottom: 15px; }
-        .u { font-weight: bold; color: #fff; cursor: pointer; text-decoration: underline transparent; transition: 0.2s; }
-        .u:hover { text-decoration: underline #fff; }
-        .t { background: #40444b; padding: 10px 15px; border-radius: 0 15px 15px 15px; display: inline-block; max-width: 80%; margin-top: 5px; line-height: 1.4; }
+        /* Estructura */
+        .app-container { display: flex; height: 100vh; }
+        .guilds { width: 72px; background: var(--bg-channels); display: flex; flex-direction: column; align-items: center; padding: 12px 0; gap: 8px; }
+        .sidebar { width: 240px; background: var(--bg-sidebar); display: flex; flex-direction: column; }
+        .chat-area { flex: 1; display: flex; flex-direction: column; background: var(--bg-dark); }
 
-        /* Popout de Usuario */
-        #user-popout { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--side); padding: 30px; border-radius: 15px; border: 2px solid var(--accent); z-index: 1000; text-align: center; box-shadow: 0 0 30px rgba(0,0,0,0.8); min-width: 250px; }
-        #user-popout .avatar { width: 80px; height: 80px; font-size: 32px; }
-        #user-popout button { margin-top: 20px; background: #ed4245; padding: 8px 20px; }
+        /* Login */
+        #login-screen { position: fixed; inset: 0; background: #1E1F22; z-index: 1000; display: flex; align-items: center; justify-content: center; }
+        .login-box { background: #313338; padding: 40px; border-radius: 8px; width: 412px; box-shadow: 0 8px 16px rgba(0,0,0,0.5); }
+        .login-box input { width: 100%; padding: 12px; margin: 8px 0; background: #1E1F22; border: 1px solid #232428; color: white; border-radius: 4px; box-sizing: border-box; }
+        .login-box button { width: 100%; padding: 12px; background: var(--discord-blue); color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; margin-top: 10px; }
 
-        /* Estilos generales */
-        #form { padding: 20px; background: var(--bg); display: flex; }
-        input { flex: 1; background: #40444b; border: none; padding: 12px; color: white; border-radius: 8px; outline: none; }
-        button { background: var(--accent); color: white; border: none; padding: 10px 20px; border-radius: 8px; margin-left: 10px; cursor: pointer; font-weight: bold; }
-        .owner-tag { color: var(--owner) !important; font-weight: bold; font-size: 0.8em; border: 1px solid var(--owner); padding: 1px 4px; border-radius: 4px; margin-left: 5px; }
-        
-        /* Pantalla de Inicio */
-        #auth { position: fixed; inset: 0; background: var(--dark); display: flex; align-items: center; justify-content: center; z-index: 100; }
-        .box { background: var(--side); padding: 40px; border-radius: 15px; text-align: center; width: 300px; }
-        .box h1 { color: var(--accent); margin-top: 0; }
-        .box input[type="text"] { width: 90%; margin-bottom: 10px; }
+        /* Mensajes */
+        #messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+        .message { display: flex; gap: 16px; position: relative; group; }
+        .message:hover { background: rgba(0,0,0,0.05); }
+        .avatar { width: 40px; height: 40px; background: var(--discord-blue); border-radius: 50%; }
+        .user-name { font-weight: 600; color: white; margin-right: 8px; }
+        .timestamp { font-size: 0.75rem; color: var(--text-muted); }
+        .delete-btn { display: none; color: var(--danger); cursor: pointer; font-size: 0.8rem; margin-left: 10px; }
+        .message:hover .delete-btn { display: inline; }
+
+        /* Input */
+        .input-box { padding: 0 16px 24px; }
+        .input-wrapper { background: #383A40; border-radius: 8px; padding: 12px 16px; }
+        #msg-input { background: transparent; border: none; color: white; width: 100%; outline: none; font-size: 1rem; }
+
+        .owner-tag { background: var(--owner-gold); color: black; font-size: 0.65rem; padding: 2px 4px; border-radius: 4px; font-weight: 800; vertical-align: middle; }
     </style>
 </head>
 <body>
-    <div id="secret-trigger" onclick="activateOwner()"></div>
 
-    <div id="user-popout">
-        <div class="avatar" id="pop-avatar" style="margin: 0 auto;"></div>
-        <h2 id="pop-name" style="margin: 10px 0;"></h2>
-        <p id="pop-desc" style="color: #b9bbbe; font-size: 14px;"></p>
-        <button onclick="closePopout()">Cerrar</button>
+<div id="login-screen">
+    <div class="login-box">
+        <h2 style="text-align: center;">¡Hola de nuevo!</h2>
+        <p style="text-align: center; color: var(--text-muted);">Estamos muy emocionados de volverte a ver.</p>
+        <input type="text" id="username" placeholder="NOMBRE DE USUARIO">
+        <input type="text" id="usertag" placeholder="USERTAG (ej: @galacto)">
+        <input type="email" id="usergmail" placeholder="GMAIL">
+        <button onclick="login()">Continuar</button>
     </div>
+</div>
 
-    <div id="auth">
-        <div class="box">
-            <h1>Coluz</h1>
-            <input type="text" id="user" placeholder="Nombre de usuario"><br>
-            <input type="text" id="desc" placeholder="Estado/Descripción"><br>
-            <label style="color: #888; font-size: 11px; display: block; margin: 10px 0 5px;">Foto de perfil:</label>
-            <input type="file" id="pfp-input" accept="image/*" style="font-size: 11px; color: #888;"><br><br>
-            <button onclick="entrar()" style="width: 100%; margin: 0;">Entrar a Coluz</button>
+<div class="app-container">
+    <div class="guilds"><div style="width: 48px; height: 48px; background: var(--discord-blue); border-radius: 16px; display: flex; align-items: center; justify-content: center; font-weight: bold;">C</div></div>
+    <div class="sidebar">
+        <div style="height: 48px; padding: 0 16px; display: flex; align-items: center; font-weight: bold; border-bottom: 1px solid rgba(0,0,0,0.2);">COLUZ SERVER</div>
+        <div style="padding: 20px 8px;">
+            <div style="color: white; padding: 8px; background: #3F4147; border-radius: 4px;"># global-board</div>
+            <div style="color: var(--text-muted); padding: 8px;"># anuncios</div>
         </div>
     </div>
-
-    <div id="sidebar">
-        <h2 style="color:var(--accent); margin-bottom: 25px;">Coluz</h2>
-        <div class="profile-card">
-            <div class="avatar" id="p-avatar">?</div>
-            <h3 id="p-name" style="margin: 5px 0;">Invitado</h3>
-            <div id="p-badge"></div>
-            <p id="p-desc" style="font-size: 12px; color: #b9bbbe; margin-top: 8px;"></p>
+    <div class="chat-area">
+        <div style="height: 48px; padding: 0 16px; display: flex; align-items: center; box-shadow: 0 1px 2px rgba(0,0,0,0.2); font-weight: bold;"># global-board</div>
+        <div id="messages"></div>
+        <div class="input-box">
+            <div class="input-wrapper">
+                <input type="text" id="msg-input" placeholder="Enviar mensaje a #global-board">
+            </div>
         </div>
     </div>
+</div>
 
-    <div id="main">
-        <ul id="messages"></ul>
-        <form id="form">
-            <input id="input" placeholder="Enviar mensaje a Coluz..." autocomplete="off">
-            <button>Enviar</button>
-        </form>
-    </div>
+<div onclick="unlockOwner()" style="position:fixed; top:0; right:0; width:20px; height:20px; z-index:9999;"></div>
 
-    <script src="/socket.io/socket.io.js"></script>
-    <script>
-        var socket = io();
-        let myuser = "", mydesc = "", mypfp = "", isOwner = false;
+<script>
+    const socket = io();
+    let currentUser = {};
 
-        // Función Secreta Chasm
-        function activateOwner() {
-            if(prompt("Acceso Chasm:") === "Chasm") {
-                isOwner = true;
-                document.getElementById('p-badge').innerHTML = '<span class="owner-tag" style="background:var(--owner); color:black; font-size:10px; padding:2px 8px; border-radius:10px; display:inline-block; margin-top:5px;">OWNER</span>';
-                alert("Bienvenido, Chasm. Rango de Dueño activado.");
-            }
+    function login() {
+        const u = document.getElementById('username').value;
+        const t = document.getElementById('usertag').value;
+        const g = document.getElementById('usergmail').value;
+        if(!u || !t || !g) return alert("Rellena todo, cabrón.");
+        
+        currentUser = { name: u, tag: t, gmail: g, role: 'USER' };
+        
+        // Recuperar si ya era OWNER localmente
+        if(localStorage.getItem('coluz_role') === 'OWNER') currentUser.role = 'OWNER';
+
+        document.getElementById('login-screen').style.display = 'none';
+    }
+
+    function unlockOwner() {
+        if(prompt("Clave Maestra:") === 'Chasm') {
+            currentUser.role = 'OWNER';
+            localStorage.setItem('coluz_role', 'OWNER');
+            alert("Rango OWNER Activo, Jefe.");
         }
+    }
 
-        function entrar() {
-            myuser = document.getElementById('user').value;
-            mydesc = document.getElementById('desc').value || "Chateando en Coluz";
-            const fileInput = document.getElementById('pfp-input');
-            const file = fileInput.files[0];
-            const reader = new FileReader();
-
-            reader.onloadend = function() {
-                mypfp = reader.result;
-                if(myuser) {
-                    document.getElementById('p-name').innerText = myuser;
-                    document.getElementById('p-desc').innerText = mydesc;
-                    document.getElementById('p-avatar').innerHTML = mypfp ? `<img src="${mypfp}">` : myuser[0].toUpperCase();
-                    document.getElementById('auth').style.display = 'none';
-                } else { alert("Ponte un nombre, galactomany"); }
-            }
-            if (file) reader.readAsDataURL(file); else reader.onloadend();
+    document.getElementById('msg-input').addEventListener('keypress', (e) => {
+        if(e.key === 'Enter' && e.target.value.trim()) {
+            socket.emit('chat message', {
+                ...currentUser,
+                text: e.target.value,
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            });
+            e.target.value = '';
         }
+    });
 
-        document.getElementById('form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const inp = document.getElementById('input');
-            if (inp.value && myuser) {
-                socket.emit('chat message', { u: myuser, t: inp.value, d: mydesc, p: mypfp, o: isOwner });
-                inp.value = '';
-            }
-        });
+    socket.on('load messages', (history) => {
+        document.getElementById('messages').innerHTML = '';
+        history.forEach(addMessage);
+    });
 
-        socket.on('chat message', (data) => {
-            const m = document.getElementById('messages');
-            const li = document.createElement('li');
-            li.className = 'm';
-            const tag = data.o ? '<span class="owner-tag">OWNER</span>' : '';
-            const miniPFP = data.p ? `<img src="${data.p}" style="width:24px; height:24px; border-radius:50%; vertical-align:middle; margin-right:8px; object-fit:cover;">` : '';
-            
-            li.innerHTML = `
-                <div style="display:flex; align-items:center;">
-                    ${miniPFP}
-                    <span class="u" onclick="viewProfile('${data.u}', '${data.d.replace(/'/g, "\\'")}', '${data.p || ''}')">${data.u}${tag}</span>
+    socket.on('chat message', addMessage);
+
+    function addMessage(msg) {
+        const div = document.createElement('div');
+        div.className = 'message';
+        div.id = `msg-${msg.id}`;
+        div.innerHTML = `
+            <div class="avatar"></div>
+            <div class="content">
+                <div class="msg-info">
+                    <span class="user-name">${msg.name}</span>
+                    ${msg.role === 'OWNER' ? '<span class="owner-tag">OWNER</span>' : ''}
+                    <span class="timestamp">Hoy a las ${msg.time}</span>
+                    ${(msg.gmail === currentUser.gmail || currentUser.role === 'OWNER') ? `<span class="delete-btn" onclick="deleteMsg(${msg.id})">Eliminar</span>` : ''}
                 </div>
-                <span class="t">${data.t}</span>
-            `;
-            m.appendChild(li);
-            m.scrollTop = m.scrollHeight;
-        });
+                <div class="text-content">${msg.text}</div>
+            </div>
+        `;
+        const container = document.getElementById('messages');
+        container.appendChild(div);
+        container.scrollTop = container.scrollHeight;
+    }
 
-        function viewProfile(name, desc, pfp) {
-            document.getElementById('pop-name').innerText = name;
-            document.getElementById('pop-desc').innerText = desc;
-            document.getElementById('pop-avatar').innerHTML = pfp ? `<img src="${pfp}">` : name[0].toUpperCase();
-            document.getElementById('user-popout').style.display = 'block';
-        }
+    function deleteMsg(id) {
+        socket.emit('delete message', { id: id });
+    }
 
-        function closePopout() { document.getElementById('user-popout').style.display = 'none'; }
-    </script>
+    socket.on('message deleted', (id) => {
+        const el = document.getElementById(`msg-${id}`);
+        if(el) el.remove();
+    });
+
+</script>
 </body>
 </html>
